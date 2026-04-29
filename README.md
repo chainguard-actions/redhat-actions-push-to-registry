@@ -1,5 +1,7 @@
 # redhat-actions/push-to-registry
 
+GitHub Action to push a container image to an image registry.
+
 Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/redhat-actions/push-to-registry](https://github.com/redhat-actions/push-to-registry).
 
 ## Versions
