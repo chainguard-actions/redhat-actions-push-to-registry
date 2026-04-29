@@ -1,6 +1,12 @@
 # redhat-actions/push-to-registry
 
-Hardened GitHub Action by [Chainguard](https://www.chainguard.dev).
+Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/redhat-actions/push-to-registry](https://github.com/redhat-actions/push-to-registry).
+
+## Versions
+
+| Version | Tag | Upstream commit |
+|---------|-----|-----------------|
+| v2.8 | [`v2.8`](https://github.com/chainguard-actions/push-to-registry/tree/v2.8) | — |
 
 ## Privacy
 

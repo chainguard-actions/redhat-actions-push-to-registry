@@ -1,0 +1,5 @@
+{
+  "owner": "redhat-actions",
+  "name": "push-to-registry",
+  "visibility": ""
+}
