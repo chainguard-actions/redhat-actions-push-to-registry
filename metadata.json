@@ -2,5 +2,6 @@
   "owner": "redhat-actions",
   "name": "push-to-registry",
   "visibility": "internal",
-  "description": "GitHub Action to push a container image to an image registry."
+  "description": "GitHub Action to push a container image to an image registry.",
+  "block_publish": false
 }
