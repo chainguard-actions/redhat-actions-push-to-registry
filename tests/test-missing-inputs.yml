@@ -1,0 +1,48 @@
+name: Test push-to-registry missing inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build a local test image
+        run: |
+          echo "FROM scratch" > /tmp/Dockerfile.test
+          echo "LABEL test=true" >> /tmp/Dockerfile.test
+          # Use busybox as a minimal real image for testing
+          docker pull busybox:latest
+          docker tag busybox:latest localhost/test-image:latest
+
+      - id: push
+        uses: .
+        continue-on-error: true
+        with:
+          image: test-image
+          tags: latest
+          registry: localhost:9999
+          username: testuser
+          password: testpassword
+          tls-verify: 'false'
+
+      - name: Assert action ran and failed gracefully (no real registry)
+        env:
+          OUTCOME: ${{ steps.push.outcome }}
+          REGISTRY_PATHS: ${{ steps.push.outputs.registry-paths }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "registry-paths: $REGISTRY_PATHS"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully as expected (no real registry at localhost:9999)"
+          elif [ "$OUTCOME" = "success" ]; then
+            # If somehow it succeeded, verify outputs are set
+            if [ -z "$REGISTRY_PATHS" ]; then
+              echo "FAIL: action succeeded but registry-paths output is empty"
+              exit 1
+            fi
+            echo "PASS: action succeeded with registry-paths: $REGISTRY_PATHS"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

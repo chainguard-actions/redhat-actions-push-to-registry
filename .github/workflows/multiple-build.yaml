@@ -1,0 +1,86 @@
+name: Multiple container CLI build tests
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # every day at midnight
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_REGISTRY: quay.io
+  IMAGE_NAMESPACE: redhat-github-actions
+  IMAGE_NAME: ptr-test
+  IMAGE_TAG: v1
+  SHORT_IMAGE_NAME_TAG: ptr-test:v1
+  FULLY_QUALIFIED_IMAGE_NAME_TAG: quay.io/redhat-github-actions/ptr-test:v1
+
+jobs:
+  build:
+    name: |-
+      Build with ${{ matrix.build_with }} and push${{ matrix.fully_qualified_image_name_tag && ' FQIN' || '' }} (latest: ${{ matrix.install_latest }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        install_latest: [ true, false ]
+        build_with: [ "docker after podman", "podman after docker", "podman only", "docker only" ]
+        fully_qualified_image_name_tag: [ true, false ]
+
+    steps:
+
+      # Checkout push-to-registry action github repository
+      - name: Checkout Push to Registry action
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install latest podman
+        if: matrix.install_latest
+        run: |
+          bash .github/install_latest_podman.sh
+
+      - name: Build image using Docker
+        if: endsWith(matrix.build_with, 'docker')
+        env:
+          IMAGE_NAME_TAG: ${{ matrix.fully_qualified_image_name_tag && env.FULLY_QUALIFIED_IMAGE_NAME_TAG || env.SHORT_IMAGE_NAME_TAG }}
+        run: |
+            docker build -t "$IMAGE_NAME_TAG" -<<EOF
+            FROM busybox
+            RUN echo "hello world"
+            EOF
+
+      - name: Build image using Podman
+        if: contains(matrix.build_with, 'podman')
+        env:
+          IMAGE_NAME_TAG: ${{ matrix.fully_qualified_image_name_tag && env.FULLY_QUALIFIED_IMAGE_NAME_TAG || env.SHORT_IMAGE_NAME_TAG }}
+        run: |
+            podman build -t "$IMAGE_NAME_TAG" -<<EOF
+            FROM busybox
+            RUN echo "hello world"
+            EOF
+
+      - name: Build image using Docker
+        if: startsWith(matrix.build_with, 'docker')
+        env:
+          IMAGE_NAME_TAG: ${{ matrix.fully_qualified_image_name_tag && env.FULLY_QUALIFIED_IMAGE_NAME_TAG || env.SHORT_IMAGE_NAME_TAG }}
+        run: |
+            docker build -t "$IMAGE_NAME_TAG" -<<EOF
+            FROM busybox
+            RUN echo "hello world"
+            EOF
+
+      - name: Push image to ${{ env.IMAGE_REGISTRY }}
+        id: push
+        uses: ./
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ matrix.fully_qualified_image_name_tag && env.FULLY_QUALIFIED_IMAGE_NAME_TAG || env.IMAGE_TAG }}
+          registry: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAMESPACE }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Echo outputs
+        env:
+          PUSH_OUTPUTS: ${{ toJSON(steps.push.outputs) }}
+        run: |
+          echo "$PUSH_OUTPUTS"

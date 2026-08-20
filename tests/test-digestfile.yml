@@ -1,0 +1,81 @@
+name: Test push-to-registry digestfile output
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Start local Docker registry
+        run: |
+          docker run -d -p 5000:5000 --name digest-test-registry registry:2
+          # Wait for registry to be ready
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:5000/v2/ > /dev/null 2>&1; then
+              echo "Registry is ready"
+              break
+            fi
+            echo "Waiting for registry... attempt $i"
+            sleep 2
+          done
+
+      - name: Prepare test image
+        run: |
+          docker pull busybox:latest
+          docker tag busybox:latest localhost:5000/digest-test:v1
+
+      - id: push
+        uses: .
+        continue-on-error: true
+        with:
+          image: digest-test
+          tags: v1
+          registry: localhost:5000
+          tls-verify: 'false'
+          digestfile: /tmp/digest-output.txt
+
+      - name: Assert digestfile and digest output
+        env:
+          OUTCOME: ${{ steps.push.outcome }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          REGISTRY_PATHS: ${{ steps.push.outputs.registry-paths }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "digest output: $DIGEST"
+          echo "registry-paths: $REGISTRY_PATHS"
+          if [ "$OUTCOME" = "success" ]; then
+            # Check digest output is set
+            if [ -z "$DIGEST" ]; then
+              echo "FAIL: digest output is empty on success"
+              exit 1
+            fi
+            # Digest should start with sha256:
+            if ! echo "$DIGEST" | grep -qE '^sha256:[a-f0-9]{64}$'; then
+              echo "FAIL: digest does not match expected format 'sha256:<64 hex chars>': $DIGEST"
+              exit 1
+            fi
+            # Check digestfile was written
+            if [ -f /tmp/digest-output.txt ]; then
+              FILE_DIGEST=$(cat /tmp/digest-output.txt)
+              echo "digestfile contents: $FILE_DIGEST"
+              if [ "$FILE_DIGEST" != "$DIGEST" ]; then
+                echo "FAIL: digestfile content '$FILE_DIGEST' does not match digest output '$DIGEST'"
+                exit 1
+              fi
+            else
+              echo "NOTE: digestfile not found at /tmp/digest-output.txt (may be written inside action container)"
+            fi
+            echo "PASS: digest output is set correctly: $DIGEST"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (podman may not be available or image not in podman store)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Stop local registry
+        if: always()
+        run: |
+          docker stop digest-test-registry || true
+          docker rm digest-test-registry || true

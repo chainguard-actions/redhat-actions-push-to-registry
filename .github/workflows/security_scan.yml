@@ -1,0 +1,35 @@
+name: Vulnerability Scan with CRDA
+on:
+  # push:
+  workflow_dispatch:
+  # pull_request_target:
+  #   types: [ assigned, opened, synchronize, reopened, labeled, edited ]
+  # schedule:
+  #   - cron: '0 0 * * *'  # every day at midnight
+
+permissions:
+  contents: read
+
+jobs:
+  crda-scan:
+    runs-on: ubuntu-22.04
+    name: Scan project vulnerability with CRDA
+    steps:
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20'
+
+      - name: Install CRDA
+        uses: redhat-actions/openshift-tools-installer@144527c7d98999f2652264c048c7a9bd103f8a82 # v1
+        with:
+          source: github
+          github_pat: ${{ github.token }}
+          crda: "latest"
+
+      # NOTE: redhat-actions/crda has been removed/archived and is no longer available.
+      # The CRDA Scan step has been removed as the action repository no longer exists
+      # and cannot be pinned to a verified commit SHA.
