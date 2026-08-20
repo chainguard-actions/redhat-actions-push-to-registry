@@ -9,7 +9,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
 | v2 | [`v2`](https://github.com/chainguard-actions/redhat-actions-push-to-registry/tree/v2) | [`5ed88d2`](https://github.com/redhat-actions/push-to-registry/commit/5ed88d269cf581ea9ef6dd6806d01562096bee9c) |
-| v2.8 | [`v2.8`](https://github.com/chainguard-actions/redhat-actions-push-to-registry/tree/v2.8) | — |
+| v2.8 | [`v2.8`](https://github.com/chainguard-actions/redhat-actions-push-to-registry/tree/v2.8) | [`5ed88d2`](https://github.com/redhat-actions/push-to-registry/commit/5ed88d269cf581ea9ef6dd6806d01562096bee9c) |
 
 ## Privacy
 
