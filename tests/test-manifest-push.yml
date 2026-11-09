@@ -1,0 +1,37 @@
+name: Test pushing a manifest list
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake podman
+        run: |
+          mkdir -p /tmp/fakebin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-podman/podman" /tmp/fakebin/podman
+          chmod +x /tmp/fakebin/podman
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+          : > /tmp/fake-podman.log
+      - id: action
+        uses: .
+        env:
+          FAKE_MANIFEST_EXISTS: "0"
+        with:
+          image: multiarch
+          tags: v2
+          registry: ghcr.io/org
+      - name: Assert manifest push
+        env:
+          PATH_OUT: ${{ steps.action.outputs.registry-path }}
+        run: |
+          echo "registry-path: $PATH_OUT"
+          cat /tmp/fake-podman.log
+          if [ "$PATH_OUT" != "ghcr.io/org/multiarch:v2" ]; then
+            echo "FAIL: registry-path"; exit 1
+          fi
+          grep -F -- "manifest push --quiet --digestfile multiarch-v2_digest.txt multiarch:v2 ghcr.io/org/multiarch:v2 --all --tls-verify=true" /tmp/fake-podman.log || { echo "FAIL: manifest push args"; exit 1; }
+          if grep -q "image exists" /tmp/fake-podman.log; then
+            echo "FAIL: image storage should not be checked for manifests"; exit 1
+          fi
+          echo "PASS"

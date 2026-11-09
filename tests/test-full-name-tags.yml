@@ -1,0 +1,38 @@
+name: Test full image name tags (no image/registry)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake podman
+        run: |
+          mkdir -p /tmp/fakebin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-podman/podman" /tmp/fakebin/podman
+          chmod +x /tmp/fakebin/podman
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+          : > /tmp/fake-podman.log
+      - id: action
+        uses: .
+        with:
+          tags: quay.io/org/app:v1 quay.io/org/app:v2
+      - name: Assert outputs
+        env:
+          PATH_OUT: ${{ steps.action.outputs.registry-path }}
+          PATHS_OUT: ${{ steps.action.outputs.registry-paths }}
+        run: |
+          echo "registry-path: $PATH_OUT"
+          echo "registry-paths: $PATHS_OUT"
+          cat /tmp/fake-podman.log
+          if [ "$PATH_OUT" != "quay.io/org/app:v1" ]; then
+            echo "FAIL: registry-path"; exit 1
+          fi
+          if [ "$PATHS_OUT" != '["quay.io/org/app:v1","quay.io/org/app:v2"]' ]; then
+            echo "FAIL: registry-paths"; exit 1
+          fi
+          grep -F -- "push --quiet --digestfile quay.io-org-app-v1_digest.txt quay.io/org/app:v2 quay.io/org/app:v2" /tmp/fake-podman.log || { echo "FAIL: push args"; exit 1; }
+          if grep -q -- "--creds" /tmp/fake-podman.log; then
+            echo "FAIL: creds should not be passed"; exit 1
+          fi
+          echo "PASS"

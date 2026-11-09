@@ -1,0 +1,63 @@
+#!/bin/sh
+# Fake podman used by the push-to-registry tests.
+# Logs every invocation and simulates image storage / push behaviour.
+# Behaviour knobs (env):
+#   FAKE_MANIFEST_EXISTS  exit code for "manifest exists" (default 1 = not a manifest)
+#   FAKE_IMAGE_EXISTS     exit code for "image exists"    (default 0 = found in podman)
+#   FAKE_DOCKER_PULL      exit code for "pull docker-daemon:..." (default 1 = not in docker)
+#   FAKE_DIGEST           digest written to --digestfile
+LOG="${FAKE_PODMAN_LOG:-/tmp/fake-podman.log}"
+echo "podman $*" >> "$LOG"
+
+do_push() {
+  df=""
+  prev=""
+  for a in "$@"; do
+    if [ "$prev" = "--digestfile" ]; then
+      df="$a"
+    fi
+    prev="$a"
+  done
+  if [ -n "$df" ]; then
+    printf '%s' "${FAKE_DIGEST:-sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}" > "$df"
+  fi
+  exit 0
+}
+
+# strip global options
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --root|--storage-opt) shift 2 ;;
+    *) break ;;
+  esac
+done
+
+case "$1" in
+  version)
+    echo "Version: 4.0.0-fake"
+    exit 0
+    ;;
+  manifest)
+    case "$2" in
+      exists) exit "${FAKE_MANIFEST_EXISTS:-1}" ;;
+      push) shift 2; do_push "$@" ;;
+    esac
+    ;;
+  image)
+    case "$2" in
+      exists) exit "${FAKE_IMAGE_EXISTS:-0}" ;;
+      inspect) echo "2024-01-01T00:00:00Z"; exit 0 ;;
+    esac
+    ;;
+  pull)
+    exit "${FAKE_DOCKER_PULL:-1}"
+    ;;
+  push)
+    shift
+    do_push "$@"
+    ;;
+  rmi)
+    exit 0
+    ;;
+esac
+exit 0

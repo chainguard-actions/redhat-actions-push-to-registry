@@ -1,0 +1,48 @@
+name: Test basic push with image, registry and multiple tags
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install fake podman
+        run: |
+          mkdir -p /tmp/fakebin
+          cp "$GITHUB_WORKSPACE/tests/fixtures/fake-podman/podman" /tmp/fakebin/podman
+          chmod +x /tmp/fakebin/podman
+          echo "/tmp/fakebin" >> "$GITHUB_PATH"
+          : > /tmp/fake-podman.log
+      - id: action
+        uses: .
+        with:
+          image: myimage
+          tags: latest v1
+          registry: quay.io/user
+          username: u
+          password: p
+      - name: Assert outputs
+        env:
+          PATH_OUT: ${{ steps.action.outputs.registry-path }}
+          PATHS_OUT: ${{ steps.action.outputs.registry-paths }}
+          DIGEST: ${{ steps.action.outputs.digest }}
+        run: |
+          echo "registry-path: $PATH_OUT"
+          echo "registry-paths: $PATHS_OUT"
+          echo "digest: $DIGEST"
+          cat /tmp/fake-podman.log
+          if [ "$PATH_OUT" != "quay.io/user/myimage:latest" ]; then
+            echo "FAIL: registry-path"; exit 1
+          fi
+          if [ "$PATHS_OUT" != '["quay.io/user/myimage:latest","quay.io/user/myimage:v1"]' ]; then
+            echo "FAIL: registry-paths"; exit 1
+          fi
+          if [ "$DIGEST" != "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" ]; then
+            echo "FAIL: digest"; exit 1
+          fi
+          grep -F -- "push --quiet --digestfile myimage-latest_digest.txt myimage:latest quay.io/user/myimage:latest --tls-verify=true --creds=u:p" /tmp/fake-podman.log || { echo "FAIL: push latest args"; exit 1; }
+          grep -F -- "push --quiet --digestfile myimage-latest_digest.txt myimage:v1 quay.io/user/myimage:v1 --tls-verify=true --creds=u:p" /tmp/fake-podman.log || { echo "FAIL: push v1 args"; exit 1; }
+          if [ ! -f "$GITHUB_WORKSPACE/myimage-latest_digest.txt" ]; then
+            echo "FAIL: default digest file missing"; exit 1
+          fi
+          echo "PASS"
