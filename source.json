@@ -4,8 +4,13 @@
   "version": "v2.8",
   "commit_sha": "5ed88d269cf581ea9ef6dd6806d01562096bee9c",
   "url": "https://github.com/redhat-actions/push-to-registry",
-  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "policy_sha": "374911c4be584df24e6da57af2d990570ef0f859",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
   "test_agent_version": "2",
-  "harden_agent_version": "2"
+  "harden_agent_version": "2",
+  "dist_artifact": {
+    "gcs_uri": "gs://patch-actions-node-artifacts/dist-artifacts/redhat-actions/push-to-registry/v2.8/sha256-1fdf325a178ea54bb9b2e2b13f2cda0f54905f3d4dd9c334001d61301daaa15f.tar.gz",
+    "sha256": "1fdf325a178ea54bb9b2e2b13f2cda0f54905f3d4dd9c334001d61301daaa15f",
+    "size_bytes": 531503
+  }
 }
